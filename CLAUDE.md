@@ -1,8 +1,8 @@
 # CLAUDE.md
 
-This file provides Claude Code-specific instructions for working on the **User-Named Elder AI Companion** repository.
+This file provides Claude Code-specific instructions for working on the **User-Named Elderly AI Companion** repository.
 
-Use this together with `AGENTS.md`. `AGENTS.md` contains global project rules. This file adds workflow expectations for Claude Code sessions.
+Use this together with `AGENTS.md`. `AGENTS.md` contains global product, safety, and architecture rules. This file adds Claude Code workflow expectations.
 
 ---
 
@@ -11,38 +11,79 @@ Use this together with `AGENTS.md`. `AGENTS.md` contains global project rules. T
 At the start of a coding session:
 
 1. Read `AGENTS.md`.
-2. Skim the relevant sections of:
+2. Read `docs/06_collaboration_workflow.md`.
+3. Skim the relevant sections of:
 
 ```text
 docs/00_overview_elderly_companion_ai.md
 docs/01_prd_elderly_multi_agent_companion_ai.md
 docs/02_technical_roadmap_elderly_multi_agent_companion_ai.md
-docs/03_fxy_integration_review.md
-docs/04_engagement_agent_optimization_review.md
+docs/05_reference_project_structure.md
 ```
 
-3. Identify whether the task is P0, P1, or Future.
-4. Refuse to expand scope silently.
-5. Prefer a small, testable change over broad refactoring.
+4. Identify the target issue number.
+5. Confirm whether the task is P0, P1, or Future.
+6. Refuse to expand scope silently.
+7. Prefer a small, testable change over broad refactoring.
 
 Current project direction:
 
 ```text
 relationship-first voice companion for older adults
 product targets older adults broadly, not a narrow subgroup
-not generic assistant
-not medical chatbot
-not addictive companion
-not real emergency system
+not a generic assistant
+not a medical chatbot
+not an addictive companion
+not a real emergency system
 ```
-
-Target users are older adults broadly. Avoid assumptions that every user is isolated, frail, cognitively impaired, or medically high-risk.
 
 ---
 
-## 2. How Claude should work on issues
+## 2. Current collaboration model
 
-### 2.1 One issue at a time
+This repo is optimized for AI-first development with asynchronous review.
+
+Assume the practical model is:
+
+```text
+one main completer advances P0 vertical slices
+reviewer checks PR behavior and safety in daily batches
+other contributors may later add non-blocking docs / QA / test cases
+```
+
+Do not assume every issue has a stable owner. Do not wait for a human assignment if the user asks you to implement the next slice.
+
+---
+
+## 3. Mainline execution order
+
+When asked what to do next, follow this order unless the user explicitly changes priority:
+
+```text
+Slice 1: #1 docs entry → #2 frontend shell → #3 FastAPI chat baseline
+Slice 2: #21 first-run onboarding → #6 CompanionAgent persona
+Slice 3: #5 Coordinator → #8 Safety → #9 Agent Trace
+Slice 4: #10 Memory → #11 Reminder
+Slice 5: #22 SensorAdapter / StateEvent → #12 GuardianAgent
+Slice 6: #13 controlled retrieval
+Slice 7: #4 mock voice UI → #23 real ASR/TTS provider
+Slice 8: #14 tests → #16 final demo materials
+```
+
+P1 issues are only after the related P0 slice is stable:
+
+```text
+#17 voice experience enhancement
+#18 proactive care preference / quiet hours / topic library
+#19 caregiver mock dashboard
+#20 evaluation data export / video polish
+```
+
+If a requested issue depends on an unfinished earlier issue, mention the dependency risk before implementing.
+
+---
+
+## 4. How Claude should work on one issue
 
 Do not attempt to implement the whole project at once.
 
@@ -52,19 +93,18 @@ For each issue:
 1. Restate the requested change briefly.
 2. Inspect relevant files.
 3. Make a minimal implementation plan.
-4. Edit files.
+4. Edit only relevant files.
 5. Run tests or explain why tests could not run.
-6. Summarize changed files and remaining risks.
+6. Prepare a PR using .github/pull_request_template.md.
+7. Leave a handoff summary.
 ```
-
-### 2.2 Small diffs
 
 Prefer:
 
 ```text
 small interfaces
 fake providers first
-unit tests first or alongside implementation
+unit tests alongside implementation
 clear schema contracts
 trace output for behavior-changing logic
 ```
@@ -81,20 +121,84 @@ hardcoding provider-specific logic everywhere
 
 ---
 
-## 3. Product behavior Claude must preserve
+## 5. Branch and PR expectations
 
-### 3.1 User-named companion persona
-
-The default user-facing persona is **not a hardcoded name**. The companion display name must be stored as `companion_display_name` and chosen by the user during onboarding or settings.
-
-Claude must preserve this behavior:
+Use short-lived branches:
 
 ```text
-The companion persona is warm, patient, concise, emotionally grounding, and stable.
-The companion feels like a familiar community junior / kind neighbor / patient old friend.
-If the user has not named the companion yet, use “the companion AI” or first-person “I”; do not invent a fixed default name.
-The companion is AI and must not pretend to be a real person, doctor, family member, or caregiver.
+feat/21-onboarding
+feat/5-coordinator
+feat/6-companion-agent
+feat/22-state-event
+feat/13-retrieval-gating
+fix/safety-medication-template
+docs/demo-script
 ```
+
+Do not use broad branches such as:
+
+```text
+feat/full-system
+feat/all-agents
+refactor-everything
+misc-updates
+```
+
+A main completer may open several small PRs before reviewer feedback arrives, as long as:
+
+```text
+- each PR is issue-scoped or slice-scoped;
+- dependencies are stated clearly;
+- DEMO_MODE=true remains runnable;
+- no unrelated files are refactored;
+- no fixed companion name, medical advice, or real emergency action is introduced.
+```
+
+Use `.github/pull_request_template.md` for every PR.
+
+---
+
+## 6. Required handoff after each AI coding session
+
+At the end of every session, include this in the PR or issue:
+
+```md
+## Handoff
+Completed:
+- ...
+
+Tested:
+- ...
+
+Not done:
+- ...
+
+Risks / questions:
+- ...
+
+Next recommended step:
+- ...
+```
+
+This allows asynchronous daily review without blocking the main completer.
+
+---
+
+## 7. Product behavior Claude must preserve
+
+### 7.1 User-named companion persona
+
+The companion display name must be stored as `companion_display_name` and chosen by the user during onboarding or settings.
+
+If the user has not named the companion yet, use:
+
+```text
+陪伴 AI / AI Companion
+```
+
+Do not invent or hardcode a fixed default name in prompts, UI copy, seed data, snapshots, tests, or demo scripts.
+
+The companion persona is warm, patient, concise, emotionally grounding, and stable. It can feel like a familiar community junior, kind neighbor, or patient old friend, but it must not pretend to be a real person, doctor, family member, or caregiver.
 
 Do not make the companion persona:
 
@@ -109,9 +213,9 @@ medical-authoritative
 emotionally possessive
 ```
 
-### 3.2 Role-first response style
+### 7.2 Role-first response style
 
-For emotional or personal messages, the response should follow:
+For emotional or personal messages, responses should follow:
 
 ```text
 1. emotional grounding
@@ -120,15 +224,13 @@ For emotional or personal messages, the response should follow:
 4. one gentle follow-up question
 ```
 
-For factual or task messages, still keep the wording warm and short.
+For factual or task messages, still keep wording warm and short.
 
-Implementation note: use a `companion_display_name` user setting. It can be empty. Do not hardcode a fixed companion name in prompts, UI copy, seed data, snapshots, or tests.
-
-### 3.3 Well-being over stickiness
+### 7.3 Well-being over stickiness
 
 Do not write code or prompts that intentionally maximize dependency or endless chat.
 
-Avoid lines such as:
+Avoid:
 
 ```text
 “只有我最懂您。”
@@ -145,7 +247,7 @@ Prefer:
 
 ---
 
-## 4. Architecture Claude should implement
+## 8. Architecture Claude should implement
 
 Use this conceptual architecture:
 
@@ -163,8 +265,6 @@ User voice/text
 → AgentTracePanel
 ```
 
-### 4.1 Autonomous agents
-
 Only these should appear as autonomous agents in code and trace:
 
 ```text
@@ -174,8 +274,6 @@ GuardianAgent
 SafetyCriticAgent
 ```
 
-### 4.2 Tools/services
-
 These should be named as tools or services:
 
 ```text
@@ -184,6 +282,7 @@ MemoryTool / MemoryStore
 ReminderTool / ReminderScheduler
 InfoRetrievalTool
 SensorSimulatorTool
+SensorAdapter / StateEncoder
 InputRuleGuard / OutputRuleGuard
 VoiceIOService
 ASRService
@@ -191,13 +290,13 @@ TTSService
 LLMProvider
 ```
 
-Do not implement old-style `EmotionAgent`, `MemoryAgent`, `StateAgent`, or `InfoRetrievalAgent` unless the task explicitly asks for compatibility aliases. If old docs mention those names, map them to the updated agent/tool distinction.
+Do not implement old-style `EmotionAgent`, `MemoryAgent`, `StateAgent`, or `InfoRetrievalAgent` unless the task explicitly asks for compatibility aliases.
 
 ---
 
-## 5. Safety implementation instructions
+## 9. Safety implementation instructions
 
-### 5.1 Do not run SafetyCritic on every turn by default
+Do not run SafetyCritic on every turn by default.
 
 Use:
 
@@ -207,8 +306,6 @@ OutputRuleGuard: always cheap deterministic checks
 SafetyCriticAgent: only on detected risk or uncertainty
 Safety templates: high-risk fallback
 ```
-
-### 5.2 High-risk routing examples
 
 These inputs must not receive direct medical advice:
 
@@ -224,84 +321,28 @@ These inputs must not receive direct medical advice:
 Correct behavior:
 
 ```text
-- acknowledge concern calmly;
-- state the system cannot diagnose or advise dosage;
-- recommend contacting doctor/pharmacist/family/emergency service as appropriate;
-- offer safe help such as recording a reminder or showing a mock emergency contact;
-- in demo mode, clearly state no real emergency call is placed.
+acknowledge concern calmly
+state the system cannot diagnose or advise dosage
+recommend contacting doctor/pharmacist/family/emergency service as appropriate
+offer safe help such as recording a reminder or showing a mock emergency contact
+in demo mode, clearly state no real emergency call is placed
 ```
-
-### 5.3 Emergency behavior
 
 Do not implement real phone calls, SMS, hospital dispatch, or emergency automation.
 
-Implement mock flow only:
-
-```text
-EmergencyContactMock
-warning banner
-mock contact card
-demo disclaimer
-```
-
 ---
 
-## 6. Memory implementation instructions
-
-### 6.1 Memory must be user-controllable
-
-Every saved memory should be visible or auditable. The Memory Center must support:
-
-```text
-view
-edit if applicable
-delete
-pause / disable categories
-```
-
-### 6.2 Markdown-first memory
-
-Use markdown memory as a human-readable source of truth when practical:
-
-```text
-data/memory/users/{user_id}/profile.md
-data/memory/users/{user_id}/preferences.md
-data/memory/users/{user_id}/events.md
-data/memory/users/{user_id}/settings.md
-```
-
-Use SQLite for structured indexing and UI queries.
-
-Vector index, if used, must be derived from approved memory content. Do not use vector memory as the only source of truth.
-
-### 6.3 Sensitive memory rule
-
-When unsure whether to save something, do not save it automatically. Ask for confirmation or skip saving.
-
-Do not save:
-
-```text
-passwords
-ID numbers
-financial information
-sensitive health details
-unverified emotional inference
-family conflict
-temporary negative mood
-```
-
----
-
-## 7. GuardianAgent instructions
+## 10. GuardianAgent instructions
 
 GuardianAgent replaces the old simple State Agent + Proactive Policy idea.
 
-It must decide both:
+Important boundary:
 
 ```text
-why caring now may help
-why not interrupting may be better
+raw/mock signal → SensorAdapter / StateEncoder → StateEvent → GuardianAgent decision
 ```
+
+Guardian must consume structured `StateEvent`, not directly interpret raw sensor values.
 
 Required output shape:
 
@@ -309,7 +350,7 @@ Required output shape:
 {
   "care_proposal": "...",
   "restraint_critique": "...",
-  "decision": "check_in | defer | do_not_check_in",
+  "decision": "check_in | defer | silent_log | safety_escalation",
   "reason": "...",
   "cooldown_applied": true,
   "trace_visible_summary": "..."
@@ -325,7 +366,9 @@ quiet hours: 22:00–07:00
 refusal pause: 24 hours for same topic
 ```
 
-Do not use sensor presets to make diagnoses. Use phrases like:
+Do not use sensor presets to make diagnoses.
+
+Use phrases like:
 
 ```text
 “看起来可能比平时少一点”
@@ -342,7 +385,7 @@ Avoid:
 
 ---
 
-## 8. Controlled retrieval instructions
+## 11. Controlled retrieval instructions
 
 InfoRetrievalTool should be gated by Coordinator.
 
@@ -366,13 +409,39 @@ memory deletion
 relationship/persona chat
 ```
 
-In tests, retrieval must use fake/mock provider.
+Medication dosage questions must not search for dosage answers.
 
-When retrieval is used, CompanionAgent should integrate results warmly and avoid raw search dumps.
+Here, “do not retrieve” means **do not call web search / browser / external retrieval tools**. It does not mean the system cannot call an existing hosted LLM API.
+
+In tests, retrieval must use fake/mock provider.
 
 ---
 
-## 9. Suggested repository commands
+## 12. Testing expectations
+
+Claude should add tests when implementing non-trivial logic.
+
+Minimum backend tests should cover:
+
+```text
+rule guards for health and medication risk
+coordinator routing
+companion modes
+first-run onboarding / companion_display_name fallback
+guardian cooldown
+SensorAdapter raw signal → StateEvent
+memory delete / pause
+reminder CRUD
+trace schema
+retrieval gating
+DEMO_MODE provider fallback
+```
+
+Tests must pass in demo/fake-provider mode and must not call real LLM, ASR, TTS, or web APIs.
+
+---
+
+## 13. Suggested repository commands
 
 These may change as the repo is initialized. Keep them updated in `README.md`.
 
@@ -409,60 +478,7 @@ Do not assume these commands exist; create or update them when implementing proj
 
 ---
 
-## 10. Testing expectations
-
-Claude should add tests when implementing non-trivial logic.
-
-Minimum backend tests:
-
-```text
-test_rule_guard_health_risk.py
-test_rule_guard_medication_risk.py
-test_coordinator_routing.py
-test_companion_modes.py
-test_guardian_cooldown.py
-test_memory_delete.py
-test_reminder_crud.py
-test_trace_schema.py
-test_retrieval_gating.py
-```
-
-Minimum frontend tests, if test framework exists:
-
-```text
-ChatPage renders transcript
-AgentTracePanel renders agents/tools distinctly
-MemoryCenter can call delete action
-SensorSimulator triggers preset event
-```
-
-Tests must pass in demo/fake-provider mode.
-
----
-
-## 11. Preferred implementation milestones
-
-When asked to create issues or implement from scratch, follow this order:
-
-```text
-Milestone 1: repo skeleton, config, README, .env.example
-Milestone 2: FastAPI + Next.js baseline
-Milestone 3: /api/chat text endpoint + FakeLLMProvider
-Milestone 4: AgentTrace schema + trace panel
-Milestone 5: CoordinatorAgent + CompanionAgent role_first mode
-Milestone 6: neutral_assistant comparison mode
-Milestone 7: Rule guards + SafetyCritic risk path
-Milestone 8: MemoryTool + Memory Center
-Milestone 9: ReminderTool + Reminder UI
-Milestone 10: SensorSimulator + GuardianAgent
-Milestone 11: InfoRetrievalTool mock + optional real weather provider
-Milestone 12: ASR/TTS integration
-Milestone 13: demo hardening + HCI evaluation logging
-```
-
----
-
-## 12. Documentation rules
+## 14. Documentation rules
 
 When code changes alter behavior, update relevant docs:
 
@@ -472,28 +488,7 @@ README.md for setup and commands
 API docs or OpenAPI schemas for endpoints
 prompt files for model behavior
 docs/05_reference_project_structure.md if folder structure changes significantly
+docs/06_collaboration_workflow.md if collaboration/order changes significantly
 ```
 
-Do not edit canonical product docs `00`–`04` unless the user specifically asks.
-
----
-
-## 13. Final response format after a coding task
-
-When finishing a task, respond with:
-
-```text
-Summary:
-- What changed.
-
-Files changed:
-- path/to/file: reason.
-
-Validation:
-- Commands run and results.
-
-Notes / risks:
-- Anything incomplete or worth reviewing.
-```
-
-Be honest if a command could not run, if dependencies were missing, or if behavior is only mocked.
+Do not edit canonical product docs `00`–`04` unless the user explicitly asks for product-document changes.
