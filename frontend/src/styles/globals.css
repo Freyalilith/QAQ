@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  background-color: theme("colors.canvas");
+  color: theme("colors.ink");
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Clear, consistent focus ring for keyboard and low-vision users. */
+*:focus-visible {
+  outline: 3px solid theme("colors.companion.DEFAULT");
+  outline-offset: 2px;
+}
