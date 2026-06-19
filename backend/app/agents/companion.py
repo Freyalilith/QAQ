@@ -60,6 +60,7 @@ class CompanionAgent:
         message: str,
         mode: CompanionMode,
         companion_display_name: str | None,
+        memory_context: list[str] | None = None,
     ) -> CompanionResult:
         named_by_user = bool(companion_display_name and companion_display_name.strip())
         display_name = (
@@ -71,6 +72,10 @@ class CompanionAgent:
         rendered_prompt = _load_prompt_template(mode).replace(
             _NAME_PLACEHOLDER, display_name
         )
+        if memory_context:
+            # Real providers weave these in; the fake provider ignores them. The
+            # retrieval still shows up in the trace (memory_used).
+            rendered_prompt += "\n\n已知的用户偏好：" + "、".join(memory_context)
 
         reply_text = self._llm.generate_companion_reply(
             CompanionReplyInput(
