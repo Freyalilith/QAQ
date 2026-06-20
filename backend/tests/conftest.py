@@ -11,6 +11,11 @@ import tempfile
 
 os.environ["DEMO_MODE"] = "true"
 os.environ["LLM_PROVIDER"] = "fake"
+os.environ["ASR_PROVIDER"] = "mock"
+os.environ["TTS_PROVIDER"] = "mock"
+# Never let a real API key from the repo-root .env reach the test suite, so a
+# real ASR/TTS/LLM provider can never be exercised live (CLAUDE.md §12).
+os.environ["OPENAI_API_KEY"] = ""
 # Point the default stores at throwaway dirs so tests never write to the repo's
 # data/. (Endpoint tests that assert persistence override the store per-test.)
 os.environ["PROFILE_DIR"] = tempfile.mkdtemp(prefix="qaq_test_profiles_")

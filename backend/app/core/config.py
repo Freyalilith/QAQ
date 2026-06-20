@@ -55,6 +55,15 @@ class Settings(BaseSettings):
     # can't exhaust memory; the mock never decodes the audio anyway.
     max_voice_upload_bytes: int = 5_000_000
 
+    # Real voice provider (#23). Reuses OPENAI_API_KEY/OPENAI_BASE_URL (the
+    # xiaomimimo OpenAI-compatible endpoint). Only used when DEMO_MODE=false and
+    # ASR_PROVIDER/TTS_PROVIDER name a real provider; DEMO_MODE always stays mock.
+    openai_base_url: str = "https://api.xiaomimimo.com/v1"
+    asr_model: str = "mimo-v2.5-asr"
+    tts_model: str = "mimo-v2.5-tts"
+    tts_voice: str = "mimo_default"
+    voice_provider_timeout_seconds: float = 60.0
+
     # Storage. Relative paths resolve under the repo root (not the launch CWD),
     # so data always lands in <repo>/data/ — the one location that is gitignored.
     profile_dir: str = "./data/profiles"

@@ -11,6 +11,7 @@ providers are deterministic mocks: no microphone model, no paid speech API.
 from __future__ import annotations
 
 import base64
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
@@ -22,6 +23,8 @@ from app.services.voice_provider import (
     get_tts_provider,
     synthesize_cached,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/voice", tags=["voice"])
 
@@ -36,9 +39,21 @@ async def transcribe(
         raise HTTPException(status_code=413, detail="audio payload too large")
 
     provider = get_asr_provider(settings)
-    result = provider.transcribe(
-        audio, content_type=request.headers.get("content-type")
-    )
+    try:
+        result = provider.transcribe(
+            audio, content_type=request.headers.get("content-type")
+        )
+    except Exception:
+        # A live-provider failure must not 500 the turn — report "not recognized"
+        # so the UI shows the gentle retry prompt and the text path still works.
+        logger.warning("ASR provider %r failed; returning ok=false.", provider.name)
+        return ASRResponse(
+            transcript="",
+            confidence=0.0,
+            ok=False,
+            provider=provider.name,
+            is_mock=provider.name in MOCK_PROVIDER_NAMES,
+        )
     return ASRResponse(
         transcript=result.transcript,
         confidence=result.confidence,
@@ -54,7 +69,14 @@ def synthesize(
     settings: Settings = Depends(get_settings),
 ) -> TTSResponse:
     provider = get_tts_provider(settings)
-    result = synthesize_cached(provider, request.text, voice=request.voice)
+    try:
+        result = synthesize_cached(provider, request.text, voice=request.voice)
+    except Exception as exc:
+        # Controlled 502 so the frontend drops audio and keeps the text reply.
+        logger.warning("TTS provider %r failed.", provider.name)
+        raise HTTPException(
+            status_code=502, detail="tts provider unavailable"
+        ) from exc
     return TTSResponse(
         audio_base64=base64.b64encode(result.audio).decode("ascii"),
         content_type=result.content_type,

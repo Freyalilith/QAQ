@@ -12,12 +12,13 @@ dependencies = [
     "uvicorn[standard]>=0.27",
     "pydantic>=2.6",
     "pydantic-settings>=2.1",
+    # Runtime: the real xiaomimimo voice provider (#23) calls the API with httpx.
+    "httpx>=0.27",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
-    "httpx>=0.27",
 ]
 
 [tool.setuptools.packages.find]

@@ -150,12 +150,23 @@ multipart dependency) and returns a transcript; `ok=false` means nothing was
 recognized, so the UI shows a gentle retry prompt and the text path still works.
 `POST /api/voice/tts` takes reply text and returns base64 audio, cached per text
 so replay is free (`cached=true`). Both sit behind `ASRProvider` / `TTSProvider`
-in `services/voice_provider`, selected like the LLM provider (mock by name, mock
-fallback in DEMO_MODE, otherwise an error). In DEMO_MODE the mocks are
-deterministic and offline: `MockASRProvider` returns a **simulated** transcript
-(no audio decoding), `MockTTSProvider` synthesizes a short soft sine-tone WAV
-with the stdlib `wave` module — a placeholder voice, but real playable/replayable
-audio. A real ASR/TTS provider arrives with #23 behind the same interface.
+in `services/voice_provider`. In DEMO_MODE the mocks are deterministic and
+offline: `MockASRProvider` returns a **simulated** transcript (no audio
+decoding), `MockTTSProvider` synthesizes a short soft sine-tone WAV with the
+stdlib `wave` module — a placeholder voice, but real playable/replayable audio.
+
+**Real provider (#23, `XiaomiMiMo*VoiceProvider`).** Selection mirrors the LLM
+provider: mock by name, **mock whenever `DEMO_MODE=true`** (so the demo never
+needs a key), and the real xiaomimimo provider only when `DEMO_MODE=false` +
+`ASR_PROVIDER`/`TTS_PROVIDER=xiaomimimo` + `OPENAI_API_KEY` is set; otherwise an
+error. xiaomimimo serves voice through `/chat/completions` (omni-style), not
+`/audio/*`: TTS puts the text in an *assistant* message with an `audio.voice`
+preset and returns base64 WAV; ASR sends the clip as an `input_audio` **data URL**
+(WAV/MP3) and returns the transcript as the message content. The provider retries
+once on 429/5xx; a live failure is caught in the route and surfaces as
+`ok=false` (ASR) or a `502` (TTS), so the chat degrades to text instead of
+erroring. The key is read from the gitignored `.env` and never logged; tests
+force the mock and never call the live API.
 
 ## Layout
 
@@ -172,7 +183,7 @@ app/
   graph/                 state · nodes · edges · build_graph (run_turn)
   schemas/               chat · trace · profile · memory · reminder · sensor · voice
   stores/                profile · trace · memory · reminder · guardian_state
-  services/              llm_provider · fake_llm_provider · voice_provider · mock_voice_provider
+  services/              llm_provider · fake_llm_provider · voice_provider · mock_voice_provider · xiaomimimo_voice_provider
   prompts/               companion_role_first.md · companion_neutral_assistant.md
 tests/                     guards · routing · safety · trace · memory · reminder · sensor · guardian · ...
 ```
@@ -182,9 +193,9 @@ truth, with a `memories.json` index for CRUD (under `MEMORY_ROOT/users/{id}/`).
 
 ## Not yet (later slices)
 
-A real ASR/TTS provider (#23) and a real LLM/retrieval provider — the
-`ASRProvider` / `TTSProvider` / `LLMProvider` interfaces and the `graph/`
-boundary are shaped so those slot in (the voice mock→real seam mirrors
-`InfoRetrievalTool`). Stores persist as JSON + markdown; SQLite is the planned
-structured upgrade. Real wearable APIs would only replace the `SensorAdapter`
-input — the `StateEvent` contract stays.
+Real ASR/TTS is wired (#23, xiaomimimo, opt-in via `DEMO_MODE=false`). Still
+mock: the LLM and retrieval providers — the `LLMProvider` interface and the
+`graph/` boundary are shaped so those slot in the same way the voice mock→real
+seam did. Stores persist as JSON + markdown; SQLite is the planned structured
+upgrade. Real wearable APIs would only replace the `SensorAdapter` input — the
+`StateEvent` contract stays.
