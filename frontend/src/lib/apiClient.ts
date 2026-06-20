@@ -1,5 +1,10 @@
 import { API_BASE_URL } from "./constants";
-import type { ChatRequest, ChatResponse } from "@/types/chat";
+import type {
+  ASRResponse,
+  ChatRequest,
+  ChatResponse,
+  TTSResponse,
+} from "@/types/chat";
 import type { MemoryCategory, MemoryEntry, MemoryView } from "@/types/memory";
 import type { ProfileUpdate, UserProfile } from "@/types/profile";
 import type { Reminder, ReminderCreate } from "@/types/reminder";
@@ -221,4 +226,33 @@ export async function refuseCare(
   if (!response.ok) {
     throw new Error(`Refuse care failed with status ${response.status}`);
   }
+}
+
+// --- Voice I/O (#4) ----------------------------------------------------------
+
+// The recorded clip is sent as the raw request body (the backend reads bytes
+// directly — no multipart). An empty/too-short clip comes back with ok=false.
+export async function transcribeAudio(audio: Blob): Promise<ASRResponse> {
+  return jsonOrThrow(
+    await fetch(`${API_BASE_URL}/api/voice/asr`, {
+      method: "POST",
+      headers: audio.type ? { "Content-Type": audio.type } : undefined,
+      body: audio,
+    }),
+    "Transcribe audio",
+  );
+}
+
+export async function synthesizeSpeech(
+  text: string,
+  voice?: string,
+): Promise<TTSResponse> {
+  return jsonOrThrow(
+    await fetch(`${API_BASE_URL}/api/voice/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(voice ? { text, voice } : { text }),
+    }),
+    "Synthesize speech",
+  );
 }
