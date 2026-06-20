@@ -25,6 +25,8 @@ logger = logging.getLogger(__name__)
 
 # Provider names that mean "use the offline mock" (kept in sync with config).
 MOCK_PROVIDER_NAMES = {"mock", "fake"}
+# Provider names that select the real xiaomimimo voice provider (#23).
+XIAOMIMIMO_PROVIDER_NAMES = {"xiaomimimo", "mimo", "openai"}
 
 
 @dataclass
@@ -71,7 +73,11 @@ class TTSProvider(ABC):
 
 
 def get_asr_provider(settings: Settings) -> ASRProvider:
-    """Select an ASR provider, with a demo-mode fallback to the mock."""
+    """Select an ASR provider.
+
+    ``DEMO_MODE`` always uses the offline mock (so the demo never needs a key);
+    only ``DEMO_MODE=false`` with a named real provider hits the live API (#23).
+    """
     # Imported here to avoid a circular import at module load.
     from app.services.mock_voice_provider import MockASRProvider
 
@@ -79,37 +85,51 @@ def get_asr_provider(settings: Settings) -> ASRProvider:
     if provider in MOCK_PROVIDER_NAMES:
         return MockASRProvider()
     if settings.demo_mode:
-        logger.warning(
-            "ASR_PROVIDER=%r is not implemented yet; falling back to the mock "
-            "provider because DEMO_MODE=true.",
+        logger.info(
+            "DEMO_MODE=true: using the mock ASR provider regardless of "
+            "ASR_PROVIDER=%r.",
             provider,
         )
         return MockASRProvider()
+    if provider in XIAOMIMIMO_PROVIDER_NAMES:
+        from app.services.xiaomimimo_voice_provider import XiaomiMiMoASRProvider
+
+        if not settings.openai_api_key:
+            raise RuntimeError(
+                f"ASR_PROVIDER={provider!r} needs OPENAI_API_KEY (set it in .env)."
+            )
+        return XiaomiMiMoASRProvider(settings)
     raise RuntimeError(
-        f"ASR provider {provider!r} is not available. Issue #4 only implements "
-        "the mock provider (real provider arrives with #23). Set ASR_PROVIDER=mock "
-        "or DEMO_MODE=true."
+        f"ASR provider {provider!r} is not available. Set ASR_PROVIDER to "
+        "mock | xiaomimimo, or DEMO_MODE=true."
     )
 
 
 def get_tts_provider(settings: Settings) -> TTSProvider:
-    """Select a TTS provider, with a demo-mode fallback to the mock."""
+    """Select a TTS provider (DEMO_MODE stays mock; see ``get_asr_provider``)."""
     from app.services.mock_voice_provider import MockTTSProvider
 
     provider = (settings.tts_provider or "").strip().lower()
     if provider in MOCK_PROVIDER_NAMES:
         return MockTTSProvider()
     if settings.demo_mode:
-        logger.warning(
-            "TTS_PROVIDER=%r is not implemented yet; falling back to the mock "
-            "provider because DEMO_MODE=true.",
+        logger.info(
+            "DEMO_MODE=true: using the mock TTS provider regardless of "
+            "TTS_PROVIDER=%r.",
             provider,
         )
         return MockTTSProvider()
+    if provider in XIAOMIMIMO_PROVIDER_NAMES:
+        from app.services.xiaomimimo_voice_provider import XiaomiMiMoTTSProvider
+
+        if not settings.openai_api_key:
+            raise RuntimeError(
+                f"TTS_PROVIDER={provider!r} needs OPENAI_API_KEY (set it in .env)."
+            )
+        return XiaomiMiMoTTSProvider(settings)
     raise RuntimeError(
-        f"TTS provider {provider!r} is not available. Issue #4 only implements "
-        "the mock provider (real provider arrives with #23). Set TTS_PROVIDER=mock "
-        "or DEMO_MODE=true."
+        f"TTS provider {provider!r} is not available. Set TTS_PROVIDER to "
+        "mock | xiaomimimo, or DEMO_MODE=true."
     )
 
 
