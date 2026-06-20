@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { synthesizeSpeech, transcribeAudio } from "@/lib/apiClient";
-import { base64ToBlob, isRecordingSupported } from "@/lib/audio";
+import { base64ToBlob } from "@/lib/audio";
+import { WavRecorder, isRecordingSupported } from "@/lib/wavRecorder";
 
 export type RecorderState = "idle" | "recording" | "transcribing";
 
@@ -29,9 +30,10 @@ const DIDNT_CATCH = "我刚才没听清，您可以再说一次，或直接打�
 const NO_MIC = "没能打开麦克风，请检查权限，或直接打字和我说话。";
 const ASR_FAILED = "语音识别暂时没成功，您可以直接打字和我说话。";
 
-// Orchestrates the mock voice loop (#4): press to record → ASR → feed the
-// transcript into chat; auto-read or replay companion replies with TTS. Voice is
-// always an enhancement — every failure path leaves the text chat fully usable.
+// Orchestrates the voice loop: press to record → ASR → feed the transcript into
+// chat; auto-read or replay companion replies with TTS. Recording produces WAV
+// (the real ASR provider needs it, #23; the mock accepts it too). Voice is always
+// an enhancement — every failure path leaves the text chat fully usable.
 export function useVoice({
   onTranscript,
 }: {
@@ -44,9 +46,7 @@ export function useVoice({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isMockVoice, setIsMockVoice] = useState(false);
 
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const streamRef = useRef<MediaStream | null>(null);
+  const recorderRef = useRef<WavRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastUrlRef = useRef<string | null>(null);
   const lastTextRef = useRef<string | null>(null);
@@ -61,15 +61,10 @@ export function useVoice({
     setRecordingSupported(isRecordingSupported());
   }, []);
 
-  const stopStream = useCallback(() => {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
-  }, []);
-
   // Release audio + mic when the chat unmounts.
   useEffect(() => {
     return () => {
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+      recorderRef.current?.dispose();
       audioRef.current?.pause();
       if (lastUrlRef.current) URL.revokeObjectURL(lastUrlRef.current);
     };
@@ -120,49 +115,43 @@ export function useVoice({
       return;
     }
     setHint(null);
+    const recorder = new WavRecorder();
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      const recorder = new MediaRecorder(stream);
-      chunksRef.current = [];
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) chunksRef.current.push(event.data);
-      };
-      recorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, {
-          type: recorder.mimeType || "audio/webm",
-        });
-        chunksRef.current = [];
-        stopStream();
-        setRecorderState("transcribing");
-        try {
-          const result = await transcribeAudio(blob);
-          if (result.ok && result.transcript.trim()) {
-            setHint(null);
-            onTranscriptRef.current(result.transcript.trim());
-          } else {
-            setHint(DIDNT_CATCH);
-          }
-        } catch {
-          setHint(ASR_FAILED);
-        } finally {
-          setRecorderState("idle");
-        }
-      };
+      await recorder.start();
       recorderRef.current = recorder;
-      recorder.start();
       setRecorderState("recording");
     } catch {
-      stopStream();
+      recorder.dispose();
       setRecorderState("idle");
       setHint(NO_MIC);
     }
-  }, [stopStream]);
+  }, []);
 
-  const stopRecording = useCallback(() => {
+  const stopRecording = useCallback(async () => {
     const recorder = recorderRef.current;
-    if (recorder && recorder.state !== "inactive") {
-      recorder.stop();
+    if (!recorder) return;
+    recorderRef.current = null;
+    setRecorderState("transcribing");
+    let blob: Blob;
+    try {
+      blob = await recorder.stop();
+    } catch {
+      setRecorderState("idle");
+      setHint(ASR_FAILED);
+      return;
+    }
+    try {
+      const result = await transcribeAudio(blob);
+      if (result.ok && result.transcript.trim()) {
+        setHint(null);
+        onTranscriptRef.current(result.transcript.trim());
+      } else {
+        setHint(DIDNT_CATCH);
+      }
+    } catch {
+      setHint(ASR_FAILED);
+    } finally {
+      setRecorderState("idle");
     }
   }, []);
 
