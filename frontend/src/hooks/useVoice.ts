@@ -29,6 +29,8 @@ export interface VoiceControls {
 const DIDNT_CATCH = "我刚才没听清，您可以再说一次，或直接打字告诉我。";
 const NO_MIC = "没能打开麦克风，请检查权限，或直接打字和我说话。";
 const ASR_FAILED = "语音识别暂时没成功，您可以直接打字和我说话。";
+// Auto-stop a forgotten recording so the uploaded WAV can't grow without bound.
+const MAX_RECORDING_MS = 60_000;
 
 // Orchestrates the voice loop: press to record → ASR → feed the transcript into
 // chat; auto-read or replay companion replies with TTS. Recording produces WAV
@@ -47,9 +49,18 @@ export function useVoice({
   const [isMockVoice, setIsMockVoice] = useState(false);
 
   const recorderRef = useRef<WavRecorder | null>(null);
+  const maxTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stopRecordingRef = useRef<() => void>(() => undefined);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastUrlRef = useRef<string | null>(null);
   const lastTextRef = useRef<string | null>(null);
+
+  const clearMaxTimer = useCallback(() => {
+    if (maxTimerRef.current) {
+      clearTimeout(maxTimerRef.current);
+      maxTimerRef.current = null;
+    }
+  }, []);
 
   // Keep the latest onTranscript without re-creating the recorder callbacks.
   const onTranscriptRef = useRef(onTranscript);
@@ -61,9 +72,10 @@ export function useVoice({
     setRecordingSupported(isRecordingSupported());
   }, []);
 
-  // Release audio + mic when the chat unmounts.
+  // Release audio + mic + timer when the chat unmounts.
   useEffect(() => {
     return () => {
+      if (maxTimerRef.current) clearTimeout(maxTimerRef.current);
       recorderRef.current?.dispose();
       audioRef.current?.pause();
       if (lastUrlRef.current) URL.revokeObjectURL(lastUrlRef.current);
@@ -120,6 +132,11 @@ export function useVoice({
       await recorder.start();
       recorderRef.current = recorder;
       setRecorderState("recording");
+      // Safety cap: auto-stop if the user forgets to.
+      maxTimerRef.current = setTimeout(
+        () => stopRecordingRef.current(),
+        MAX_RECORDING_MS,
+      );
     } catch {
       recorder.dispose();
       setRecorderState("idle");
@@ -128,6 +145,7 @@ export function useVoice({
   }, []);
 
   const stopRecording = useCallback(async () => {
+    clearMaxTimer();
     const recorder = recorderRef.current;
     if (!recorder) return;
     recorderRef.current = null;
@@ -154,6 +172,12 @@ export function useVoice({
       setRecorderState("idle");
     }
   }, []);
+
+  // Let the max-duration timer call the current stopRecording without making it
+  // a dependency of startRecording.
+  useEffect(() => {
+    stopRecordingRef.current = stopRecording;
+  });
 
   const clearHint = useCallback(() => setHint(null), []);
 
