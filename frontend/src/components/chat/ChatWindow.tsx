@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import type { VoiceControls } from "@/hooks/useVoice";
 import type { ChatMessage, CompanionMode } from "@/types/chat";
 import { MessageBubble } from "./MessageBubble";
 import { ReplayButton } from "./ReplayButton";
@@ -14,6 +15,7 @@ export function ChatWindow({
   onChangeMode,
   onSend,
   companionDisplayName,
+  voice,
 }: {
   messages: ChatMessage[];
   isSending: boolean;
@@ -21,6 +23,7 @@ export function ChatWindow({
   onChangeMode: (mode: CompanionMode) => void;
   onSend: (text: string) => void;
   companionDisplayName?: string | null;
+  voice: VoiceControls;
 }) {
   const [draft, setDraft] = useState("");
   const listEndRef = useRef<HTMLDivElement>(null);
@@ -28,6 +31,10 @@ export function ChatWindow({
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isSending]);
+
+  const lastCompanionText =
+    [...messages].reverse().find((m) => m.role === "companion" && !m.isError)
+      ?.text ?? null;
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -63,11 +70,19 @@ export function ChatWindow({
         <div ref={listEndRef} />
       </div>
 
+      <VoiceStatus voice={voice} />
+
       <form
         onSubmit={handleSubmit}
         className="border-t border-black/5 px-5 py-4 flex items-end gap-3"
       >
-        <VoiceRecorderButton />
+        <VoiceRecorderButton
+          supported={voice.recordingSupported}
+          state={voice.recorderState}
+          disabled={isSending}
+          onStart={voice.startRecording}
+          onStop={voice.stopRecording}
+        />
         <label htmlFor="chat-input" className="sr-only">
           输入消息
         </label>
@@ -94,10 +109,75 @@ export function ChatWindow({
         </button>
       </form>
 
-      <div className="px-5 pb-3 -mt-1">
-        <ReplayButton />
+      <div className="px-5 pb-3 -mt-1 flex items-center justify-between gap-3">
+        <ReplayButton
+          text={lastCompanionText}
+          isSpeaking={voice.isSpeaking}
+          isMockVoice={voice.isMockVoice}
+          onPlay={() => lastCompanionText && voice.speak(lastCompanionText)}
+          onStop={voice.stopSpeaking}
+        />
+        <AutoSpeakToggle
+          on={voice.autoSpeak}
+          onChange={voice.setAutoSpeak}
+        />
       </div>
     </section>
+  );
+}
+
+function VoiceStatus({ voice }: { voice: VoiceControls }) {
+  let text: string | null = null;
+  if (voice.recorderState === "recording") {
+    text = "正在录音，说完点一下停止…";
+  } else if (voice.recorderState === "transcribing") {
+    text = "正在识别您说的话…";
+  } else if (voice.hint) {
+    text = voice.hint;
+  }
+  if (!text) return null;
+
+  return (
+    <div
+      role="status"
+      className="px-5 -mb-1 pt-1 text-base text-muted flex items-center gap-2"
+    >
+      {voice.recorderState === "recording" ? (
+        <span aria-hidden className="h-2.5 w-2.5 rounded-full bg-companion animate-pulse" />
+      ) : null}
+      <span>{text}</span>
+    </div>
+  );
+}
+
+function AutoSpeakToggle({
+  on,
+  onChange,
+}: {
+  on: boolean;
+  onChange: (on: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={() => onChange(!on)}
+      className="inline-flex items-center gap-2 text-base text-muted"
+    >
+      <span
+        className={`relative inline-block h-6 w-11 rounded-full transition-colors ${
+          on ? "bg-companion" : "bg-black/15"
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+            on ? "translate-x-5" : "translate-x-0.5"
+          }`}
+        />
+      </span>
+      自动朗读回复
+    </button>
   );
 }
 

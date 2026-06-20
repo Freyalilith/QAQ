@@ -18,6 +18,26 @@ export interface ChatResponse {
   agent_trace: AgentTrace;
 }
 
+// --- Voice I/O (#4) ---------------------------------------------------------
+
+export interface ASRResponse {
+  transcript: string;
+  confidence: number;
+  // False when nothing was recognized — UI shows a gentle retry prompt.
+  ok: boolean;
+  provider: string;
+  is_mock: boolean;
+}
+
+export interface TTSResponse {
+  audio_base64: string;
+  content_type: string;
+  provider: string;
+  voice: string;
+  cached: boolean;
+  is_mock: boolean;
+}
+
 export type MessageRole = "user" | "companion";
 
 export interface ChatMessage {
