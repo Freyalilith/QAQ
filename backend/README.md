@@ -163,9 +163,10 @@ error. xiaomimimo serves voice through `/chat/completions` (omni-style), not
 `/audio/*`: TTS puts the text in an *assistant* message with an `audio.voice`
 preset and returns base64 WAV; ASR sends the clip as an `input_audio` **data URL**
 (WAV/MP3) and returns the transcript as the message content. The provider retries
-once on 429/5xx; a live failure surfaces as `ok=false` (ASR) or no audio (TTS),
-so the chat degrades to text. The key is read from the gitignored `.env` and
-never logged; tests force the mock and never call the live API.
+once on 429/5xx; a live failure is caught in the route and surfaces as
+`ok=false` (ASR) or a `502` (TTS), so the chat degrades to text instead of
+erroring. The key is read from the gitignored `.env` and never logged; tests
+force the mock and never call the live API.
 
 ## Layout
 

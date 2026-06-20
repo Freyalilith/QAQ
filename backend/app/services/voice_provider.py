@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # Provider names that mean "use the offline mock" (kept in sync with config).
 MOCK_PROVIDER_NAMES = {"mock", "fake"}
 # Provider names that select the real xiaomimimo voice provider (#23).
-XIAOMIMIMO_PROVIDER_NAMES = {"xiaomimimo", "mimo", "openai"}
+XIAOMIMIMO_PROVIDER_NAMES = {"xiaomimimo", "mimo"}
 
 
 @dataclass
