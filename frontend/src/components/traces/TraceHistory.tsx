@@ -18,9 +18,15 @@ const RISK_STYLES: Record<string, string> = {
 };
 
 function formatTime(iso: string): string {
-  // created_at is ISO-8601; show HH:MM, fall back to the raw string.
-  const match = iso.match(/T(\d{2}:\d{2})/);
-  return match ? match[1] : iso;
+  // created_at is ISO-8601 in UTC; show HH:MM in the viewer's LOCAL time
+  // (slicing the raw string would show UTC). Fall back to the raw string.
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 }
 
 export function TraceHistory({
