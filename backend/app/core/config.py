@@ -72,6 +72,15 @@ class Settings(BaseSettings):
     llm_max_tokens: int = 512
     llm_timeout_seconds: float = 30.0
 
+    # Real retrieval (#13 follow-up): Open-Meteo (free, no API key) for weather /
+    # air quality. Only used when DEMO_MODE=false + RETRIEVAL_PROVIDER=open_meteo;
+    # otherwise the offline mock. Default location is Hong Kong (CityU) — change
+    # retrieval_lat/lon/location for the demo's city.
+    retrieval_lat: float = 22.3193
+    retrieval_lon: float = 114.1694
+    retrieval_location: str = "香港"
+    retrieval_timeout_seconds: float = 10.0
+
     # Storage. Relative paths resolve under the repo root (not the launch CWD),
     # so data always lands in <repo>/data/ — the one location that is gitignored.
     profile_dir: str = "./data/profiles"

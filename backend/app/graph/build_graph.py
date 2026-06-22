@@ -41,7 +41,14 @@ def build_deps(settings: Settings) -> GraphDeps:
         safety_critic=SafetyCriticAgent(),
         memory_tool=MemoryTool(MemoryStore(settings.resolved_memory_root)),
         reminder_tool=ReminderTool(ReminderStore(settings.resolved_reminder_dir)),
-        info_retrieval=InfoRetrievalTool(settings.retrieval_provider),
+        info_retrieval=InfoRetrievalTool(
+            settings.retrieval_provider,
+            demo_mode=settings.demo_mode,
+            lat=settings.retrieval_lat,
+            lon=settings.retrieval_lon,
+            location=settings.retrieval_location,
+            timeout=settings.retrieval_timeout_seconds,
+        ),
     )
 
 
