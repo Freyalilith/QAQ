@@ -26,10 +26,13 @@ export function ChatWindow({
   voice: VoiceControls;
 }) {
   const [draft, setDraft] = useState("");
-  const listEndRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    listEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Scroll the messages container itself, not the window — `scrollIntoView`
+    // would also scroll the page and jump down to the (taller) trace panel.
+    const el = listRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages, isSending]);
 
   const lastCompanionText =
@@ -50,7 +53,7 @@ export function ChatWindow({
         <ModeToggle mode={mode} onChange={onChangeMode} />
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+      <div ref={listRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
         {messages.length === 0 ? (
           <p className="text-muted text-lg">
             您好，想和我说点什么都可以。可以先打个招呼，或者说说今天过得怎么样。
@@ -67,7 +70,6 @@ export function ChatWindow({
         {isSending ? (
           <p className="text-muted text-base">我听到了，正在想…</p>
         ) : null}
-        <div ref={listEndRef} />
       </div>
 
       <VoiceStatus voice={voice} />
