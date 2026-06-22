@@ -166,17 +166,14 @@ function AutoSpeakToggle({
       className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-base text-muted"
     >
       <span
-        className={`relative inline-block h-6 w-11 shrink-0 rounded-full transition-colors ${
-          on ? "bg-companion" : "bg-black/15"
+        aria-hidden
+        className={`flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors ${
+          on ? "justify-end bg-companion" : "justify-start bg-black/15"
         }`}
       >
-        <span
-          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-            on ? "translate-x-5" : "translate-x-0.5"
-          }`}
-        />
+        <span className="h-5 w-5 rounded-full bg-white shadow-sm" />
       </span>
-      自动朗读回复
+      <span>自动朗读回复</span>
     </button>
   );
 }
