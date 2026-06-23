@@ -208,9 +208,15 @@ through `/chat/completions`):
 Keys live only in the gitignored `.env` and are never logged; tests force the
 fake/mock providers and never call the live API.
 
+Real **retrieval** is available too: `RETRIEVAL_PROVIDER=open_meteo` (with
+`DEMO_MODE=false`) fetches real weather / air quality from Open-Meteo — free, no
+API key — for the configured location (`RETRIEVAL_LAT/LON/LOCATION`, default Hong
+Kong); it falls back to the offline mock on any failure, and `DEMO_MODE=true`
+always uses the mock. So with `DEMO_MODE=false` the LLM, voice, and retrieval can
+all run on real providers.
+
 ## Not yet (later slices)
 
-Still mock: the **retrieval** provider (weather/search) — `InfoRetrievalTool` has
-the same mock→real seam. Stores persist as JSON + markdown; SQLite is the planned
-structured upgrade. Real wearable APIs would only replace the `SensorAdapter`
-input — the `StateEvent` contract stays.
+Stores persist as JSON + markdown; SQLite is the planned structured upgrade. Real
+wearable APIs would only replace the `SensorAdapter` input — the `StateEvent`
+contract stays.
